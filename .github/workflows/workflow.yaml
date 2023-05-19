@@ -28,6 +28,7 @@ jobs:
 
     # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
     - name: Terraform Init
+      working-directory: ./terraform-resources
       run: terraform init
       env:
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
@@ -38,6 +39,7 @@ jobs:
 
     # Generates an execution plan for Terraform
     - name: Terraform Plan
+      working-directory: ./terraform-resources
       run: terraform plan --var-file=tf.tfvars
       env:
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
