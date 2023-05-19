@@ -3,25 +3,25 @@ variable "region" {}
 variable "location" {}
 variable "bigquery_datasets" {
   description = "BigQuery DataSets"
-  type        = map(object({
+  type = map(object({
     datasetName = string
   }))
 }
 variable "buckets" {
   description = "BigQuery DataSets"
-  type        = map(object({
+  type = map(object({
     bucketName = string
   }))
 }
 variable "pubsub_topics" {
   description = "Pub Sub Topics"
-  type        = map(object({
+  type = map(object({
     topicName = string
   }))
 }
 variable "bucket_objects" {
   description = "Pub Sub Topics"
-  type        = map(object({
+  type = map(object({
     bucketName = string,
     objectName = string
   }))
