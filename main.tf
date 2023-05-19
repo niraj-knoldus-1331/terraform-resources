@@ -82,7 +82,7 @@ resource "google_kms_crypto_key" "example-key" {
 
 resource "google_artifact_registry_repository" "artifactory-repo" {
   location      = var.location
-  repository_id = "docker-images"
+  repository_id = "docker-images-test"
   description   = "docker repository"
   format        = "DOCKER"
 }
