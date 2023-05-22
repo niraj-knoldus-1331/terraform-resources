@@ -32,6 +32,21 @@ variable "key_set_name" {
 variable "key_ring_name" {
   default = ""
 }
+variable "function_name" {
+  default = ""
+}
+variable "runtime" {
+  default = ""
+}
+variable "function_entry_point" {
+  default = ""
+}
+variable "service_account_email" {
+  default = ""
+}
+variable "topic_id" {
+  default = ""
+}
 variable "delete_contents_on_destroy" {
   description = "(Optional) If set to true, delete all the tables in the dataset when destroying the resource; otherwise, destroying the resource will fail if tables are present."
   type        = bool
