@@ -93,4 +93,19 @@ variable "access" {
     }
   ]
 }
+variable "data_gen_func" {
+  default = ""
+}
+variable "input_bucket" {
+  default = ""
+}
+variable "output_bucket" {
+  default = ""
+}
+variable "num_records" {
+  default = ""
+}
+variable "function_entry_point_data_gen" {
+  default = ""
+}
 
