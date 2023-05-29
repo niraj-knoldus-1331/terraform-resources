@@ -40,7 +40,7 @@ resource "google_bigquery_dataset" "datasets" {
 }
 
 
-resource "google_storage_bucket" "cloudfunciton_bucket" {
+resource "google_storage_bucket" "buckets" {
   for_each = var.buckets
   name     = each.value.bucketName
   location = var.location
@@ -54,7 +54,7 @@ resource "google_storage_bucket_object" "content_folder" {
   name       = each.value.objectName
   content    = "Not really a directory, but it's empty."
   bucket     = each.value.bucketName
-  depends_on = [google_storage_bucket.cloudfunciton_bucket]
+  depends_on = [google_storage_bucket.buckets]
 }
 
 resource "google_pubsub_topic" "pubsub_topic" {
