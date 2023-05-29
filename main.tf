@@ -40,7 +40,7 @@ resource "google_bigquery_dataset" "datasets" {
 }
 
 
-resource "google_storage_bucket" "cloudfunciton_bucket" {
+resource "google_storage_bucket" "buckets" {
   for_each = var.buckets
   name     = each.value.bucketName
   location = var.location
@@ -54,7 +54,7 @@ resource "google_storage_bucket_object" "content_folder" {
   name       = each.value.objectName
   content    = "Not really a directory, but it's empty."
   bucket     = each.value.bucketName
-  depends_on = [google_storage_bucket.cloudfunciton_bucket]
+  depends_on = [google_storage_bucket.buckets]
 }
 
 resource "google_pubsub_topic" "pubsub_topic" {
@@ -86,6 +86,113 @@ resource "google_artifact_registry_repository" "artifactory-repo" {
   description   = "docker repository"
   format        = "DOCKER"
 }
+resource "google_storage_bucket" "cloudfunciton_bucket" {
+  name     = "${var.project_id}-cloud-function"
+  location = var.location
+  encryption {
+    default_kms_key_name = ""
+  }
+}
+data "archive_file" "publishToPubSub" {
+  type        = "zip"
+  output_path = "${path.module}/resources/publishToPubSub/function.zip"
+  source {
+    content  = file("${path.module}/resources/publishToPubSub/main.py")
+    filename = "main.py"
+  }
+  source {
+    content  = file("${path.module}/resources/publishToPubSub/requirements.txt")
+    filename = "requirements.txt"
+  }
+}
+data "archive_file" "dataGen" {
+  type        = "zip"
+  output_path = "${path.module}/resources/dataGen/dataGen.zip"
+  source {
+    content  = file("${path.module}/resources/dataGen/main.py")
+    filename = "main.py"
+  }
+  source {
+    content  = file("${path.module}/resources/dataGen/requirements.txt")
+    filename = "requirements.txt"
+  }
+}
 
+# Upload the zip to the bucket. The archive in Cloud Storage uses the md5 of the zip file.
+resource "google_storage_bucket_object" "archive" {
+  name       = "src-${data.archive_file.publishToPubSub.output_md5}.zip"
+  bucket     = google_storage_bucket.cloudfunciton_bucket.name
+  source     = "${path.module}/resources/publishToPubSub/function.zip"
+  depends_on = [data.archive_file.publishToPubSub]
+}
+# Upload the zip to the bucket. The archive in Cloud Storage uses the md5 of the zip file.
+resource "google_storage_bucket_object" "archive1" {
+  name       = "src-${data.archive_file.dataGen.output_md5}.zip"
+  bucket     = google_storage_bucket.cloudfunciton_bucket.name
+  source     = "${path.module}/resources/dataGen/dataGen.zip"
+  depends_on = [data.archive_file.publishToPubSub]
+}
+
+resource "google_storage_bucket_object" "data-gen" {
+  name       = "src-${data.archive_file.publishToPubSub.output_md5}.zip"
+  bucket     = google_storage_bucket.cloudfunciton_bucket.name
+  source     = "${path.module}/resources/publishToPubSub/function.zip"
+  depends_on = [data.archive_file.publishToPubSub]
+}
+resource "google_cloudfunctions_function" "function-publish" {
+  name    = var.function_name
+  runtime = var.runtime
+
+  available_memory_mb   = 256
+  entry_point           = var.function_entry_point_data_gen
+  timeout               = 60
+  project               = var.project_id
+  region                = var.region
+  trigger_http          = true
+  source_archive_bucket = google_storage_bucket.cloudfunciton_bucket.name
+  source_archive_object = google_storage_bucket_object.archive.name
+  service_account_email = var.service_account_email
+
+  environment_variables = {
+    PROJECT_ID = var.project_id
+    TOPIC_ID   = var.topic_id
+  }
+}
+resource "google_cloudfunctions_function" "dataGen-func" {
+  name    = var.data_gen_func
+  runtime = var.runtime
+
+  available_memory_mb   = 256
+  entry_point           = var.function_entry_point
+  timeout               = 60
+  project               = var.project_id
+  region                = var.region
+  trigger_http          = true
+  source_archive_bucket = google_storage_bucket.cloudfunciton_bucket.name
+  source_archive_object = google_storage_bucket_object.archive.name
+  service_account_email = var.service_account_email
+
+  environment_variables = {
+    INPUT_BUCKET  = var.input_bucket
+    OUTPUT_BUCKET = var.output_bucket
+    NUM_RECORDS   = var.num_records
+  }
+}
+
+# Make the function public - TODO : authentication
+resource "google_cloudfunctions_function_iam_member" "invoker-monitor" {
+  project        = google_cloudfunctions_function.function-publish.project
+  region         = google_cloudfunctions_function.function-publish.region
+  cloud_function = google_cloudfunctions_function.function-publish.name
+  role           = "roles/cloudfunctions.invoker"
+  member         = "allUsers"
+}
+resource "google_cloudfunctions_function_iam_member" "invoker-data-gen" {
+  project        = google_cloudfunctions_function.dataGen-func.project
+  region         = google_cloudfunctions_function.dataGen-func.region
+  cloud_function = google_cloudfunctions_function.dataGen-func.name
+  role           = "roles/cloudfunctions.invoker"
+  member         = "allUsers"
+}
 
 
